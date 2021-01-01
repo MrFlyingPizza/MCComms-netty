@@ -5,6 +5,7 @@ import common.message.Message;
 import java.io.Serializable;
 import java.util.UUID;
 
+@Deprecated
 public class FloatControlAudioMessage extends Message<FloatControlAudioMessage.AudioData> {
 
     private static final long serialVersionUID = 1L;

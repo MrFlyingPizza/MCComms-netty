@@ -4,6 +4,7 @@ import common.message.Message;
 
 import java.util.UUID;
 
+@Deprecated
 public class LinkageMessage extends Message<Integer> {
 
     private static final long serialVersionUID = 1L;

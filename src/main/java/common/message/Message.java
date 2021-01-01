@@ -3,6 +3,7 @@ package common.message;
 import java.io.Serializable;
 import java.util.UUID;
 
+@Deprecated
 public abstract class Message<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
