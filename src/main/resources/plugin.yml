@@ -1,0 +1,64 @@
+main: server.paperplugin.CommPlugin
+name: mccomms
+version: '1.0.0'
+description: A plugin that opens a proximity voice chat server. Must be used with included client.
+author: MrFlyingPizza
+prefix: MCComms
+
+permissions:
+  mccomms.link:
+    default: true
+    description: Allow linking code generation and linking of voice client.
+  mccomms.countconnections:
+    default: false
+    description: Allows /voiceclientcount to see the number of connected clients.
+  mccomms.countpendingcodes:
+    default: false
+    description: Allows /pendingcodecount to see the number of active awaiting linking codes.
+  mccomms.setproximityrange:
+    default: false
+    description: Allows /setproximityrange which set the range which voice can be heard.
+  mccomms.*:
+    description: Wildcard permission.
+    default: op
+    children:
+      mccomms.link: true
+      mccomms.coutconnections: true
+      mccomms.countpendingcodes: true
+      mccomms.setproximityrange: true
+
+commands:
+  authvoiceclient:
+    aliases:
+    - authvc
+    - avc
+    usage: "Usage: /<command>"
+    description: Generates a code for authentication with proximity voice client.
+    permission: mccomms.link
+
+  voiceclientcount:
+    aliases:
+      - vcc
+      - vccount
+    usage: "Usage: /<command>"
+    description: Returns the number of voice client channels current stored as connected.
+    permission: mccomms.countconnections
+    permission-message: You do not have permission to use this command.
+
+  pendingcodecount:
+    aliases:
+      - pcc
+      - pendingcount
+    usage: "Usage: /<command>"
+    description: Returns the number of pending codes currently active.
+    permission: mccomms.countpendingcodes
+    permission-message: You do not have permission to use this command.
+
+  setproximityrange:
+    aliases:
+      - vcrange
+      - vcr
+    usage: "Usage: /<command> [decimal-value]"
+    description: Sets the range in blocks which voice can be heard through the voice client. Empty argument for default.
+    permission: mccomms.setproximityrange
+    permission-message: You do not have permission to use this command.
