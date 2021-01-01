@@ -1,8 +1,7 @@
 package server;
 
-import common.message.audio.FloatControlAudioMessage;
-import common.message.audio.PlainAudioMessage;
-import common.message.connection.LinkageMessage;
+import common.message.audio.AudioMessage;
+import common.message.connection.CodeMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.bukkit.Bukkit;
@@ -17,9 +16,6 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
 
     private static final UUID NIL_UUID = new UUID(0,0);
     private UUID uuid = NIL_UUID;
-
-    private final FloatControlAudioMessage.AudioData AUDIO_DATA = new FloatControlAudioMessage.AudioData(0,0,null);
-    private final FloatControlAudioMessage TO_SEND = new FloatControlAudioMessage(uuid, AUDIO_DATA);
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
@@ -38,9 +34,9 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
 
-        if (msg instanceof LinkageMessage) {
+        if (msg instanceof CodeMessage) {
 
-            LinkageMessage message = (LinkageMessage) msg;
+            CodeMessage message = (CodeMessage) msg;
 
             boolean success = false;
             System.out.println("Connection message received.");
@@ -74,18 +70,20 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
             }
 
 
-        } else if (msg instanceof PlainAudioMessage) {
+        } else if (msg instanceof AudioMessage) {
 
             if (uuid == NIL_UUID) return;
 
-            PlainAudioMessage received = (PlainAudioMessage) msg;
+            AudioMessage message = (AudioMessage) msg;
 
-            if (received.getUUID() == NIL_UUID) return;
+            if (message.getUUID() == NIL_UUID) return;
 
 
             Player player = Server.getConnections().get(uuid).getPlayer();
 
             List<Player> players = player.getWorld().getPlayers();
+
+            AudioMessage audioToSend = new AudioMessage();
 
             for (Player p : players) {
 
@@ -112,19 +110,18 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
                             player_facing.setY(0);
                             sound_direct.setY(0);
 
-                            double sound_dir_x = sound_direct.getX();
-                            double sound_dir_z = sound_direct.getZ();
-                            double facing_x = player_facing.getX();
-                            double facing_z = player_facing.getZ();
-                            double pan = Math.sin(Math.atan2(sound_dir_x, sound_dir_z) - Math.atan2(facing_x, facing_z))
-                                    * (sound_dir_x*sound_dir_x + sound_dir_z*sound_dir_z);
+//                            double sound_dir_x = sound_direct.getX();
+//                            double sound_dir_z = sound_direct.getZ();
+//                            double facing_x = player_facing.getX();
+//                            double facing_z = player_facing.getZ();
+//                            double pan = Math.sin(Math.atan2(sound_dir_x, sound_dir_z) - Math.atan2(facing_x, facing_z))
+//                                    * (sound_dir_x*sound_dir_x + sound_dir_z*sound_dir_z);
 
-                            TO_SEND.setUUID(p.getUniqueId());
-                            AUDIO_DATA.setGain(gain);
-                            AUDIO_DATA.setPan((float) pan);
-                            AUDIO_DATA.setSound(received.getSound());
+                            audioToSend.setUUID(p.getUniqueId());
+                            audioToSend.setGain(gain);
+                            audioToSend.setSound(message.getSound());
 
-                            con.getChannel().writeAndFlush(TO_SEND);
+                            con.getChannel().writeAndFlush(audioToSend);
 
                         }
 

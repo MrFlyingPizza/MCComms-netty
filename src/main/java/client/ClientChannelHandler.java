@@ -1,8 +1,7 @@
 package client;
 
-import common.message.audio.FloatControlAudioMessage;
-import common.message.audio.PlainAudioMessage;
-import common.message.connection.LinkageMessage;
+import common.message.audio.AudioMessage;
+import common.message.connection.CodeMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
@@ -18,14 +17,18 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
     private UUID uuid = NIL_UUID;
 
     private final int MAX_AUDIO_QUEUE_SIZE = 50;
-    private final ConcurrentLinkedQueue<FloatControlAudioMessage> AUDIO_MESSAGES_QUEUE = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<AudioMessage> AUDIO_MESSAGES_QUEUE = new ConcurrentLinkedQueue<>();
+
+    private final AudioMessage OUTBOUND_AUDIO_MESSAGE = new AudioMessage();
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
 
         /* SEND CONNECTION CODE TO THE SERVER */
+        CodeMessage outboundCodeMessage = new CodeMessage();
+        outboundCodeMessage.setCode(ClientApplication.code);
 
-        ctx.writeAndFlush(new LinkageMessage(uuid, ClientApplication.code));
+        ctx.writeAndFlush(outboundCodeMessage);
 
         /* CAPTURE AND SEND THREAD */
 
@@ -39,18 +42,19 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
 
-            byte[] buffer = new byte[line.getBufferSize() / 40];
+            byte[] buffer = new byte[AudioMessage.SOUND_SIZE];
 
             System.out.println("Capture line started.");
 
-            PlainAudioMessage outboundMessage = new PlainAudioMessage(uuid, buffer);
+            OUTBOUND_AUDIO_MESSAGE.setSound(buffer);
+            OUTBOUND_AUDIO_MESSAGE.setUUID(uuid);
 
             while (ctx.channel().isOpen() && line.isOpen()) {
 
                 if (line.available() >= buffer.length) {
 
                     line.read(buffer, 0, buffer.length);
-                    Thread channelWriteThread = new Thread(()->ctx.writeAndFlush(outboundMessage));
+                    Thread channelWriteThread = new Thread(()->ctx.writeAndFlush(OUTBOUND_AUDIO_MESSAGE));
                     channelWriteThread.start();
 
                 }
@@ -68,13 +72,13 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
 
             while (ctx.channel().isOpen() && line.isOpen()) {
 
-                FloatControlAudioMessage inboundMessage = AUDIO_MESSAGES_QUEUE.poll();
+                AudioMessage inboundAudioMessage = AUDIO_MESSAGES_QUEUE.poll();
 
-                if (inboundMessage != null) {
+                if (inboundAudioMessage != null) {
 
-                    float gain = inboundMessage.getAudioData().getGain();
-                    float pan = inboundMessage.getAudioData().getPan();
-                    byte[] sound = inboundMessage.getAudioData().getSound();
+                    float gain = inboundAudioMessage.getGain();
+                    float pan = inboundAudioMessage.getPan();
+                    byte[] sound = inboundAudioMessage.getSound();
 
                     byte[] stereoSound = new byte[sound.length * 2];
 
@@ -121,23 +125,23 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        if (msg instanceof LinkageMessage) {
+        if (msg instanceof CodeMessage) {
 
-            LinkageMessage message = (LinkageMessage) msg;
+            CodeMessage message = (CodeMessage) msg;
 
-            if (this.uuid == NIL_UUID) {
+            if (uuid == NIL_UUID) {
 
-                this.uuid = message.getUUID();
+                uuid = message.getUUID();
                 ClientApplication.getApp().updateStatus("Obtained UUID " + uuid);
 
             } else {
                 ClientApplication.getApp().updateStatus("Nil returned, unsuccessful request");
             }
 
-        } else if (msg instanceof FloatControlAudioMessage) {
+        } else if (msg instanceof AudioMessage) {
 
             if (AUDIO_MESSAGES_QUEUE.size() <= MAX_AUDIO_QUEUE_SIZE) {
-                AUDIO_MESSAGES_QUEUE.add((FloatControlAudioMessage) msg);
+                AUDIO_MESSAGES_QUEUE.add((AudioMessage) msg);
             }
 
         } else {

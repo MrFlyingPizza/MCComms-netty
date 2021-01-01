@@ -1,5 +1,6 @@
 package client;
 
+import common.message.codec.MessageCodec;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -8,9 +9,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
 
 import javax.sound.sampled.*;
 
@@ -69,6 +67,8 @@ public class Client {
             audioStarted = true;
         }
 
+        // TODO : add multichannel audio
+
         /* BOOTSTRAPPING CLIENT */
         if (!channelOpened) {
             this.workerGroup = new NioEventLoopGroup();
@@ -83,8 +83,7 @@ public class Client {
                 public void initChannel(SocketChannel ch) {
 
                     ch.pipeline().addLast(
-                            new ObjectEncoder(),
-                            new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(Client.class.getClassLoader())),
+                            new MessageCodec(),
                             new ClientChannelHandler()
                     );
 
