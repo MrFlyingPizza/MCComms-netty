@@ -83,8 +83,6 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
 
             List<Player> players = player.getWorld().getPlayers();
 
-            AudioMessage audioToSend = new AudioMessage();
-
             for (Player p : players) {
 
                 if (p.getUniqueId() == uuid) continue;
@@ -117,11 +115,11 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
 //                            double pan = Math.sin(Math.atan2(sound_dir_x, sound_dir_z) - Math.atan2(facing_x, facing_z))
 //                                    * (sound_dir_x*sound_dir_x + sound_dir_z*sound_dir_z);
 
-                            audioToSend.setUUID(p.getUniqueId());
-                            audioToSend.setGain(gain);
-                            audioToSend.setSound(message.getSound());
+                            //message.setUUID(p.getUniqueId());
+                            message.setGain(gain);
+                            message.setSound(message.getSound());
 
-                            con.getChannel().writeAndFlush(audioToSend);
+                            con.getChannel().writeAndFlush(message);
 
                         }
 
