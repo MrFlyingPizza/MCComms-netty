@@ -41,10 +41,7 @@ public class Client {
     }
 
     /* Instance Definition */
-
-    // audio instances
     private TargetDataLine targetLine;
-    private SourceDataLine sourceLine;
 
     private EventLoopGroup workerGroup;
     private ChannelFuture channelFuture;
@@ -118,12 +115,13 @@ public class Client {
         if (channelOpened) {
 
             this.targetLine.close();
-            this.sourceLine.close();
             this.audioStarted = false;
 
             this.channelFuture.channel().closeFuture();
             this.workerGroup.shutdownGracefully();
             this.channelOpened = false;
+
+            ClientApplication.getApp().enableFields();
         }
 
         for (Map.Entry<UUID, AudioChannel> entry : audioChannels.entrySet()) {
