@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import server.Server;
 
@@ -19,6 +20,8 @@ public class CommPlugin extends JavaPlugin {
 
     final float defaultRange = 40.0f;
     float configRange;
+
+    CommPlugin instance = this;
 
     @Override
     public void onEnable() {
@@ -43,6 +46,13 @@ public class CommPlugin extends JavaPlugin {
                 UUID uuid = event.getPlayer().getUniqueId();
                 Server.getConnections().get(uuid).getChannel().closeFuture();
                 Server.getConnections().remove(uuid);
+            }
+        }, this);
+
+        getServer().getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onDisable(PluginDisableEvent event) {
+                Server.getInstance().stop();
             }
         }, this);
 
