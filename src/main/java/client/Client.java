@@ -12,7 +12,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import javax.sound.sampled.*;
-import javax.xml.transform.Source;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -68,7 +67,7 @@ public class Client {
     }
 
     // bootstrap the client and claim audio resources
-    public void start(String host, int port, int code) throws InterruptedException, LineUnavailableException {
+    public void start(String host, int port) throws InterruptedException, LineUnavailableException {
 
         /* CLAIMING AUDIO DEVICES */
         if (!audioStarted) {
