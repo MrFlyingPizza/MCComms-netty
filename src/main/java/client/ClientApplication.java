@@ -73,8 +73,8 @@ public class ClientApplication {
                 try {
                     Client.getInstance().start(
                             ipTextField.getText(),
-                            Integer.parseInt(portTextField.getText()),
-                            code = Integer.parseInt(connectCodeTextField.getText()));
+                            Integer.parseInt(portTextField.getText())
+                    );
 
                 } catch (InterruptedException | LineUnavailableException interruptedException) {
                     interruptedException.printStackTrace();
