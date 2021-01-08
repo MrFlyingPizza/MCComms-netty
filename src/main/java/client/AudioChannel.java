@@ -6,7 +6,6 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
-import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -28,10 +27,6 @@ public class AudioChannel {
         PAN_CONTROL = (FloatControl) LINE.getControl(FloatControl.Type.PAN);
 
         start();
-    }
-
-    public boolean isRunning() {
-        return running;
     }
 
     public UUID getUUID() {
