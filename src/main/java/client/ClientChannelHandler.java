@@ -5,19 +5,16 @@ import common.message.connection.CodeMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-import javax.sound.sampled.FloatControl;
-import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
+import java.util.HashMap;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
 
     private static final UUID NIL_UUID = new UUID(0,0);
-    private UUID uuid = NIL_UUID;
+    private static UUID uuid = NIL_UUID;
 
-    private final int MAX_AUDIO_QUEUE_SIZE = 50;
-    private final ConcurrentLinkedQueue<AudioMessage> AUDIO_MESSAGES_QUEUE = new ConcurrentLinkedQueue<>();
+    private final HashMap<UUID, AudioChannel> AUDIO_CHANNELS = Client.getInstance().getAudioChannels();
 
     private final AudioMessage OUTBOUND_AUDIO_MESSAGE = new AudioMessage();
 
@@ -30,94 +27,12 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
 
         ctx.writeAndFlush(outboundCodeMessage);
 
-        /* CAPTURE AND SEND THREAD */
-
-        Thread outboundThread = new Thread(()->{
-
-            TargetDataLine line = Client.getInstance().getTargetLine();
-            if (line.isOpen()) {
-                line.start();
-            } else {
-                System.out.println("Capturing line is not open.");
-                return;
-            }
-
-            byte[] buffer = new byte[AudioMessage.SOUND_SIZE];
-
-            System.out.println("Capture line started.");
-
-            OUTBOUND_AUDIO_MESSAGE.setSound(buffer);
-            OUTBOUND_AUDIO_MESSAGE.setUUID(uuid);
-
-            while (ctx.channel().isOpen() && line.isOpen()) {
-
-                if (line.available() >= buffer.length) {
-
-                    line.read(buffer, 0, buffer.length);
-                    Thread channelWriteThread = new Thread(()->ctx.writeAndFlush(OUTBOUND_AUDIO_MESSAGE));
-                    channelWriteThread.start();
-
-                }
-
-            }
-            System.out.println("Capture line ended.");
-        });
-        outboundThread.start();
-
-        /* PLAYBACK FROM QUEUE THREAD */
-
-        Thread inboundThread = new Thread(()->{
-
-            SourceDataLine line = Client.getInstance().getSourceLine();
-
-            while (ctx.channel().isOpen() && line.isOpen()) {
-
-                AudioMessage inboundAudioMessage = AUDIO_MESSAGES_QUEUE.poll();
-
-                if (inboundAudioMessage != null) {
-
-                    float gain = inboundAudioMessage.getGain();
-                    float pan = inboundAudioMessage.getPan();
-                    byte[] sound = inboundAudioMessage.getSound();
-
-                    byte[] stereoSound = new byte[sound.length * 2];
-
-                    for (int i = 0; i < sound.length; i += 2) {
-                        stereoSound[i * 2] = sound[i];
-                        stereoSound[i*2+1] = sound[i+1];
-                        stereoSound[i*2+2] = sound[i];
-                        stereoSound[i*2+3] = sound[i+1];
-                    }
-
-                    FloatControl gainControl = (FloatControl) line.getControl(FloatControl.Type.MASTER_GAIN);
-                    FloatControl panControl = (FloatControl) line.getControl(FloatControl.Type.PAN);
-
-                    gainControl.setValue(gain);
-                    panControl.setValue(pan);
-
-                    line.start();
-                    line.write(stereoSound, 0, stereoSound.length);
-
-                } else {
-                    line.drain();
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            }
-
-        });
-        inboundThread.start();
-
         ClientApplication.getApp().disableFields();
 
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         Client.getInstance().stop();
         ClientApplication.getApp().enableFields();
     }
@@ -129,19 +44,74 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
 
             CodeMessage message = (CodeMessage) msg;
 
-            if (uuid == NIL_UUID) {
+            if (uuid.equals(NIL_UUID)) { // If UUID has not been updated (therefore not authenticated)
 
-                uuid = message.getUUID();
-                ClientApplication.getApp().updateStatus("Obtained UUID " + uuid);
+                if (!message.getUUID().equals(NIL_UUID)) { // If received UUID isn't NIL_UUID (therefore denied code)
+
+                    /* Updating UUID to Minecraft Player UUID */
+
+                    uuid = message.getUUID();
+                    ClientApplication.getApp().updateStatus("Obtained UUID " + uuid);
+                    System.out.println("Received UUID " + uuid);
+
+
+                    /* CAPTURE AND SEND THREAD */
+
+                    Thread outboundThread = new Thread(()->{
+
+                        TargetDataLine line = Client.getInstance().getTargetLine();
+                        if (line.isOpen()) {
+                            line.start();
+                        } else {
+                            System.out.println("Capturing line is not open.");
+                            return;
+                        }
+
+                        byte[] buffer = new byte[AudioMessage.SOUND_SIZE];
+
+                        System.out.println("Capture line started.");
+
+                        OUTBOUND_AUDIO_MESSAGE.setSound(buffer);
+                        OUTBOUND_AUDIO_MESSAGE.setUUID(uuid);
+
+                        while (ctx.channel().isOpen() && line.isOpen()) {
+
+                            if (line.available() >= buffer.length && uuid != NIL_UUID) {
+
+                                line.read(buffer, 0, buffer.length);
+                                ctx.writeAndFlush(OUTBOUND_AUDIO_MESSAGE);
+
+                            }
+
+                        }
+                        System.out.println("Capture line ended.");
+                    });
+                    outboundThread.start();
+
+                } else {
+                    ClientApplication.getApp().updateStatus("Nil returned, unsuccessful request");
+                }
 
             } else {
-                ClientApplication.getApp().updateStatus("Nil returned, unsuccessful request");
+                System.out.println("Faulty Connection Message received.");
             }
 
         } else if (msg instanceof AudioMessage) {
 
-            if (AUDIO_MESSAGES_QUEUE.size() <= MAX_AUDIO_QUEUE_SIZE) {
-                AUDIO_MESSAGES_QUEUE.add((AudioMessage) msg);
+            AudioMessage message = (AudioMessage) msg;
+
+            UUID messageUUID = message.getUUID();
+
+            if (messageUUID.equals(NIL_UUID)) return;
+
+            AudioChannel channel = AUDIO_CHANNELS.get(messageUUID);
+            if (channel != null) {
+                channel.enqueue(message);
+            } else {
+                AUDIO_CHANNELS.put(
+                        messageUUID,
+                        new AudioChannel(messageUUID)
+                );
             }
 
         } else {
@@ -154,7 +124,7 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
     }
 }
