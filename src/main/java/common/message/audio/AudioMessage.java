@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 public class AudioMessage extends AbstractMessage {
 
     public static final byte TYPE_CODE = 2;
-    public static final int SOUND_SIZE = 1024;
+    public static final int SOUND_SIZE = 2048;
     public static final int LENGTH = AbstractMessage.LENGTH + Float.BYTES + Float.BYTES + SOUND_SIZE;
 
     private float gain = 0;
