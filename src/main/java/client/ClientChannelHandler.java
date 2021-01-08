@@ -25,6 +25,8 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
         CodeMessage outboundCodeMessage = new CodeMessage();
         outboundCodeMessage.setCode(ClientApplication.code);
 
+        System.out.println("Sending CodeMessage " + outboundCodeMessage.getCode());
+
         ctx.writeAndFlush(outboundCodeMessage);
 
         ClientApplication.getApp().disableFields();
@@ -34,7 +36,6 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         Client.getInstance().stop();
-        ClientApplication.getApp().enableFields();
     }
 
     @Override
