@@ -71,11 +71,12 @@ public class ClientApplication {
             } else {
 
                 try {
+                    code = Integer.parseInt(connectCodeTextField.getText());
                     Client.getInstance().start(
                             ipTextField.getText(),
                             Integer.parseInt(portTextField.getText())
                     );
-
+                    System.out.println("Code " + code);
                 } catch (InterruptedException | LineUnavailableException interruptedException) {
                     interruptedException.printStackTrace();
                 }
